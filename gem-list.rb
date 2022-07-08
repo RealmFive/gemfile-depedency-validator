@@ -1,31 +1,49 @@
 class Dependencies
     class << self
-        def read_file()
+        def list_of_dependencies()
             f=File.open('../periodic-pigeon/Gemfile')
             list= []
             f.each do |line|
                 if line.index("gem") == 0
-                    # puts line
-                    #list= %w line.split[1]
                     list << line.split[1].gsub("'", "").gsub(",","")
-                    pp list
                 end
             end
             f.close
+            list
         end
 
-        def collection
-            client[:events]
+        def reset(dependencies)
+            Dir.chdir("../periodic-pigeon")
+            `git reset --hard && bundle install`
         end
 
-        private
+        def test_method(dependencies)
+            Dir.chdir("../periodic-pigeon")
+            output =`git status --porcelain --untracked-files=no`
 
-        def client
-            return @client if defined?(@client)
-
-            @client = Mongo::Client.new(["10.10.1.198:27017"], database: "deviceEventService", user: "alisson.ntwali", password: "CU6APrLEqTtj")
+            if output.empty? ==true
+                dependencies.select do |dependency|
+                    puts "removing #{dependency}"
+                    `bundle remove #{dependency}`
+                    puts "running tests"
+                    `rails test`
+                    success= ($?.exitstatus == 0)
+                    puts "reseting"
+                    `git reset --hard && bundle install`
+                    success
+                end
+            else
+                puts "File was modified after previous commit"
+                puts output
+            end
+            
         end
     end
 end
 
-Dependencies.read_file()
+dependencies =Dependencies.list_of_dependencies()
+unnecessary =Dependencies.test_method(dependencies)
+puts "These dependencies are not necessary"
+unnecessary.each {|u| puts "- #{u}"}
+
+# Dependencies.reset(dependencies)
