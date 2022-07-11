@@ -1,15 +1,11 @@
 class Dependencies
     class << self
         def list_of_dependencies()
-            f=File.open('../periodic-pigeon/Gemfile')
-            list= []
-            f.each do |line|
-                if line.index("gem") == 0
-                    list << line.split[1].gsub("'", "").gsub(",","")
-                end
+            File.open('../periodic-pigeon/Gemfile') do |file|
+                file.each_line
+                    .select { |line| line.start_with?("gem") }
+                    .map { |line| line.split[1].tr("',", "") }
             end
-            f.close
-            list
         end
 
         def reset(dependencies)
